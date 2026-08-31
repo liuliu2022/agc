@@ -36,6 +36,13 @@ Alarm sticky bits continue recording while DSA is frozen.
 
 ## Required wiring
 
+For a new Vivado integration, instantiate `top_agc_axi.v`; it already connects
+`up_axi`, `agc_regmap` and `top_agc` in the same `s_axi_aclk` domain. Connect
+its `s_axi_*` interface to the Zynq UltraScale+ MPSoC AXI master and assign an
+address in Vivado Address Editor.
+
+If the three modules are integrated separately, connect these ports:
+
 Connect these ports at the integration level:
 
 ```text

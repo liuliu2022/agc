@@ -63,6 +63,17 @@ module agc_th2_detector (
     // =======================================================
     reg groupA_over_th2; 
     reg groupB_over_th2; 
+    reg [4:0] input_valid_pipe;
+
+    // The synchronizer and OR tree reset to zero. Without this validity delay,
+    // reset release looks like "all channels weak" for several clocks and the
+    // AGC incorrectly removes 1 dB of attenuation at startup.
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            input_valid_pipe <= 5'b00000;
+        else
+            input_valid_pipe <= {input_valid_pipe[3:0], 1'b1};
+    end
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -83,7 +94,8 @@ module agc_th2_detector (
         end else begin
             // 核心逻辑：NOR (或非)。
             // 只有当 groupA 和 groupB 都是 0 时 (即8个通道全都是0)，才输出 1。
-            global_th2_weak_alert <= ~(groupA_over_th2 | groupB_over_th2);
+            global_th2_weak_alert <= input_valid_pipe[4] &
+                                     ~(groupA_over_th2 | groupB_over_th2);
         end
     end
 
