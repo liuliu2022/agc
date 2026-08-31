@@ -1,10 +1,10 @@
 `timescale 1ns / 1ps
 
 module agc_th2_detector (
-    input  wire        clk,               // ×´Ì¬»ú¹¤×÷Ê±ÖÓ
-    input  wire        rst_n,             // Òì²½¸´Î»£¬µÍÓĞĞ§
+    input  wire        clk,               // çŠ¶æ€æœºå·¥ä½œæ—¶é’Ÿ
+    input  wire        rst_n,             // å¼‚æ­¥å¤ä½ï¼Œä½æœ‰æ•ˆ
 
-    // 1. À´×Ô RF-ADC IP µÄ 8 ¸öÊµÊ±ãĞÖµ±¨¾¯ĞÅºÅ (Threshold 2)
+    // 1. æ¥è‡ª RF-ADC IP çš„ 8 ä¸ªå®æ—¶é˜ˆå€¼æŠ¥è­¦ä¿¡å· (Threshold 2)
     input  wire        adc0_th2,
     input  wire        adc1_th2,
     input  wire        adc2_th2,
@@ -14,19 +14,19 @@ module agc_th2_detector (
     input  wire        adc6_th2,
     input  wire        adc7_th2,
 
-    // 2. À´×Ô AXI-Lite ½Ó¿ÚµÄÇå³ıÂö³å
-    input  wire        axi_clear_status,  // ¸ßÓĞĞ§Âö³å
+    // 2. æ¥è‡ª AXI-Lite æ¥å£çš„æ¸…é™¤è„‰å†²
+    input  wire        axi_clear_status,  // é«˜æœ‰æ•ˆè„‰å†²
 
-    // 3. Êä³ö¸øÖĞĞÄ DSA FSM µÄÈ«¾Ö¹ıÈõ¸æ¾¯ (¸ßµçÆ½´ú±í£ºÈ«Ô±¹ıÈõ£¬ÔÊĞí¼õĞ¡Ë¥¼õ)
+    // 3. è¾“å‡ºç»™ä¸­å¿ƒ DSA FSM çš„å…¨å±€è¿‡å¼±å‘Šè­¦ (é«˜ç”µå¹³ä»£è¡¨ï¼šå…¨å‘˜è¿‡å¼±ï¼Œå…è®¸å‡å°è¡°å‡)
     output reg         global_th2_weak_alert,
 
-    // 4. Êä³ö¸ø AXI-Lite ¼Ä´æÆ÷µÄÕ³ĞÔ×´Ì¬×ÜÏß (¸ßµçÆ½´ú±í£º¸ÃÍ¨µÀÔø¾­Ô¾¹ı TH2)
+    // 4. è¾“å‡ºç»™ AXI-Lite å¯„å­˜å™¨çš„ç²˜æ€§çŠ¶æ€æ€»çº¿ (é«˜ç”µå¹³ä»£è¡¨ï¼šè¯¥é€šé“æ›¾ç»è·ƒè¿‡ TH2)
     output wire  [7:0]  th2_status_bus_sticky
 );
 
     // =======================================================
-    // Stage 0: CDC - clk_adcX Óò -> clk (s_axi_aclk) Óò
-    // 8 Â·¶ÀÁ¢±¨¾¯Î»£¬ÓÃÏòÁ¿»¯ 2FF Í¬²½Æ÷Ò»´ÎĞÔ´¦Àí
+    // Stage 0: CDC - clk_adcX åŸŸ -> clk (s_axi_aclk) åŸŸ
+    // 8 è·¯ç‹¬ç«‹æŠ¥è­¦ä½ï¼Œç”¨å‘é‡åŒ– 2FF åŒæ­¥å™¨ä¸€æ¬¡æ€§å¤„ç†
     // =======================================================
     wire [7:0] th2_async;
     wire [7:0] th2_sync;
@@ -45,7 +45,7 @@ module agc_th2_detector (
                         
                                      
     // =======================================================
-    // Stage 1: ÊäÈë»º³å¸ôÀë
+    // Stage 1: è¾“å…¥ç¼“å†²éš”ç¦»
     // =======================================================
     reg [7:0] th2_stage1_reg;
 
@@ -58,8 +58,8 @@ module agc_th2_detector (
     end
 
     // =======================================================
-    // Stage 2: ·Ö×é¾ÛºÏ (Partial OR)
-    // ×¢Òâ£ºÕâÀïÈÔÈ»ÊÇ OR£¬ÎÒÃÇÔÚÏÂÒ»¼¶ÔÙ×öÈ¡·´
+    // Stage 2: åˆ†ç»„èšåˆ (Partial OR)
+    // æ³¨æ„ï¼šè¿™é‡Œä»ç„¶æ˜¯ ORï¼Œæˆ‘ä»¬åœ¨ä¸‹ä¸€çº§å†åšå–å
     // =======================================================
     reg groupA_over_th2; 
     reg groupB_over_th2; 
@@ -75,33 +75,30 @@ module agc_th2_detector (
     end
 
     // =======================================================
-    // Stage 3: Ó²¼şÊµÊ±È«¾Ö¸æ¾¯ (NOR Logic)
+    // Stage 3: ç¡¬ä»¶å®æ—¶å…¨å±€å‘Šè­¦ (NOR Logic)
     // =======================================================
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            global_th2_weak_alert <= 1'b0; // ¸´Î»Ê±Ä¬ÈÏ²»´¥·¢¼õĞ¡ÔöÒæ¶¯×÷
+            global_th2_weak_alert <= 1'b0; // å¤ä½æ—¶é»˜è®¤ä¸è§¦å‘å‡å°å¢ç›ŠåŠ¨ä½œ
         end else begin
-            // ºËĞÄÂß¼­£ºNOR (»ò·Ç)¡£
-            // Ö»ÓĞµ± groupA ºÍ groupB ¶¼ÊÇ 0 Ê± (¼´8¸öÍ¨µÀÈ«¶¼ÊÇ0)£¬²ÅÊä³ö 1¡£
+            // æ ¸å¿ƒé€»è¾‘ï¼šNOR (æˆ–é)ã€‚
+            // åªæœ‰å½“ groupA å’Œ groupB éƒ½æ˜¯ 0 æ—¶ (å³8ä¸ªé€šé“å…¨éƒ½æ˜¯0)ï¼Œæ‰è¾“å‡º 1ã€‚
             global_th2_weak_alert <= ~(groupA_over_th2 | groupB_over_th2);
         end
     end
 
     // =======================================================
-    // Stage 4: Èí¼şÓÑºÃµÄÕ³ĞÔ×´Ì¬×ÜÏßÂß¼­ 
+    // Stage 4: è½¯ä»¶å‹å¥½çš„ç²˜æ€§çŠ¶æ€æ€»çº¿é€»è¾‘
     // =======================================================
      reg  [7:0]  th2_status_bus_sticky1;
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             th2_status_bus_sticky1 <= 8'd0;
         end 
-        else if (axi_clear_status) begin
-            th2_status_bus_sticky1 <= 8'd0;
-        end 
-        else begin
-            // Ö»Òª³öÏÖ¹ı¸ßµçÆ½£¨Ô½¹ıTH2£©£¬¾ÍËø´æÎª 1
+        else if (axi_clear_status)
+            th2_status_bus_sticky1 <= th2_stage1_reg;
+        else
             th2_status_bus_sticky1 <= th2_status_bus_sticky1 | th2_stage1_reg;
-        end
     end
     assign th2_status_bus_sticky = th2_status_bus_sticky1;
 endmodule

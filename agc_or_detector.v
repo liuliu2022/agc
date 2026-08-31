@@ -1,10 +1,10 @@
 `timescale 1ns / 1ps
 
 module agc_or_detector (
-    input  wire        clk,               // ÓëÖĞĞÄ FSM Í¬Ô´µÄ¹¤×÷Ê±ÖÓ
-    input  wire        rst_n,             // Òì²½¸´Î»£¬µÍÓĞĞ§
+    input  wire        clk,               // ä¸ä¸­å¿ƒ FSM åŒæºçš„å·¥ä½œæ—¶é’Ÿ
+    input  wire        rst_n,             // å¼‚æ­¥å¤ä½ï¼Œä½æœ‰æ•ˆ
 
-    // 1. À´×Ô RF-ADC IP µÄ 8 ¸öÊµÊ±¹ıÔØ±¨¾¯ĞÅºÅ (Over Range)
+    // 1. æ¥è‡ª RF-ADC IP çš„ 8 ä¸ªå®æ—¶è¿‡è½½æŠ¥è­¦ä¿¡å· (Over Range)
     input  wire        adc0_or,
     input  wire        adc1_or,
     input  wire        adc2_or,
@@ -14,38 +14,41 @@ module agc_or_detector (
     input  wire        adc6_or,
     input  wire        adc7_or,
 
-    // 2. À´×Ô AXI-Lite ½Ó¿ÚµÄÇå³ıÂö³å
+    // 2. æ¥è‡ª AXI-Lite æ¥å£çš„æ¸…é™¤è„‰å†²
     input  wire        axi_clear_status,  
 
-    // 3. Êä³ö¸øÖĞĞÄ DSA FSM µÄÈ«¾ÖÏ÷¶¥¸æ¾¯ (´¥·¢ FAST_ATTACK)
+    // 3. è¾“å‡ºç»™ä¸­å¿ƒ DSA FSM çš„å…¨å±€å‰Šé¡¶å‘Šè­¦ (è§¦å‘ FAST_ATTACK)
     output reg         global_or_alert,
 
-    // 4. Êä³ö¸ø AXI-Lite ¼Ä´æÆ÷µÄÕ³ĞÔ×´Ì¬×ÜÏß (ÓÃÓÚËÀ»úºóµÄ¹ÊÕÏËİÔ´)
+    // 4. è¾“å‡ºç»™ AXI-Lite å¯„å­˜å™¨çš„ç²˜æ€§çŠ¶æ€æ€»çº¿ (ç”¨äºæ­»æœºåçš„æ•…éšœæº¯æº)
     output wire  [7:0]  or_status_bus_sticky
 );
 
     // =======================================================
-    // Stage 1: ÊäÈë»º³å¸ôÀë (Õ¶¶ÏÀ´×Ô IP ºËµÄ²¼ÏßÑÓ³Ù)
+    // Stage 1: è¾“å…¥ç¼“å†²éš”ç¦» (æ–©æ–­æ¥è‡ª IP æ ¸çš„å¸ƒçº¿å»¶è¿Ÿ)
     // =======================================================
-    reg [7:0] or_stage1_reg;
+    wire [7:0] or_async = {adc7_or, adc6_or, adc5_or, adc4_or,
+                           adc3_or, adc2_or, adc1_or, adc0_or};
+    wire [7:0] or_sync;
+    reg  [7:0] or_stage1_reg;
+
+    sync_nff #(.WIDTH(8)) u_sync_or (
+        .dst_clk   (clk),
+        .dst_rst_n (rst_n),
+        .async_in  (or_async),
+        .sync_out  (or_sync)
+    );
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             or_stage1_reg <= 8'd0;
         end else begin
-            or_stage1_reg[0] <= adc0_or;
-            or_stage1_reg[1] <= adc1_or;
-            or_stage1_reg[2] <= adc2_or;
-            or_stage1_reg[3] <= adc3_or;
-            or_stage1_reg[4] <= adc4_or;
-            or_stage1_reg[5] <= adc5_or;
-            or_stage1_reg[6] <= adc6_or;
-            or_stage1_reg[7] <= adc7_or;
+            or_stage1_reg <= or_sync;
         end
     end
 
     // =======================================================
-    // Stage 2 & 3: Ó²¼şÊµÊ±È«¾Ö¸æ¾¯ (Pipeline OR Tree)
+    // Stage 2 & 3: ç¡¬ä»¶å®æ—¶å…¨å±€å‘Šè­¦ (Pipeline OR Tree)
     // =======================================================
     reg groupA_or; 
     reg groupB_or; 
@@ -56,30 +59,27 @@ module agc_or_detector (
             groupB_or <= 1'b0;
             global_or_alert <= 1'b0;
         end else begin
-            // ·Ö×é¾ÛºÏ
+            // åˆ†ç»„èšåˆ
             groupA_or <= or_stage1_reg[0] | or_stage1_reg[1] | or_stage1_reg[2] | or_stage1_reg[3];
             groupB_or <= or_stage1_reg[4] | or_stage1_reg[5] | or_stage1_reg[6] | or_stage1_reg[7];
             
-            // Ö»ÒªÓĞÈÎºÎÒ»¸ùÏß±¨Ï÷¶¥£¬Á¢¿ÌÀ­¸ßÈ«¾ÖÖĞ¶Ï
+            // åªè¦æœ‰ä»»ä½•ä¸€æ ¹çº¿æŠ¥å‰Šé¡¶ï¼Œç«‹åˆ»æ‹‰é«˜å…¨å±€ä¸­æ–­
             global_or_alert <= groupA_or | groupB_or;
         end
     end
 
     // =======================================================
-    // Stage 4: Èí¼şÓÑºÃµÄÕ³ĞÔ×´Ì¬×ÜÏßÂß¼­ (Sticky Logic)
+    // Stage 4: è½¯ä»¶å‹å¥½çš„ç²˜æ€§çŠ¶æ€æ€»çº¿é€»è¾‘ (Sticky Logic)
     // =======================================================
     reg [7:0]  or_status_bus_sticky1;
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             or_status_bus_sticky1 <= 8'd0;
         end 
-        else if (axi_clear_status) begin
-            or_status_bus_sticky1 <= 8'd0; // ÊÕµ½Èí¼şÇå³ıÖ¸Áî£¬ÇåÁã¹ÊÕÏÂë
-        end 
-        else begin
-            // ÓÀÔ¶Ëø´æÏ÷¶¥×´Ì¬£¬¹© ARM ¶ÁÈ¡ÆÀ¹ÀÊı¾İÓĞĞ§ĞÔ
+        else if (axi_clear_status)
+            or_status_bus_sticky1 <= or_stage1_reg;
+        else
             or_status_bus_sticky1 <= or_status_bus_sticky1 | or_stage1_reg;
-        end
     end
    assign or_status_bus_sticky = or_status_bus_sticky1;
 endmodule

@@ -1,9 +1,9 @@
 `timescale 1ns / 1ps
 module agc_th1_detector (
-    input  wire        clk,               // ×´Ì¬»ú¹¤×÷Ê±ÖÓ (s_axi_aclk, 200MHz)
-    input  wire        rst_n,             // Òì²½¸´Î»£¬µÍÓĞĞ§£¬s_axi_aclkÓòÍ¬²½ÊÍ·Å
+    input  wire        clk,               // çŠ¶æ€æœºå·¥ä½œæ—¶é’Ÿ (s_axi_aclk, 200MHz)
+    input  wire        rst_n,             // å¼‚æ­¥å¤ä½ï¼Œä½æœ‰æ•ˆï¼Œs_axi_aclkåŸŸåŒæ­¥é‡Šæ”¾
 
-    // 1. À´×Ô RF-ADC IP µÄ 8 ¸öÊµÊ±ãĞÖµ±¨¾¯ĞÅºÅ (clk_adcX Óò£¬Î´Í¬²½)
+    // 1. æ¥è‡ª RF-ADC IP çš„ 8 ä¸ªå®æ—¶é˜ˆå€¼æŠ¥è­¦ä¿¡å· (clk_adcX åŸŸï¼ŒæœªåŒæ­¥)
     input  wire        adc0_th1,
     input  wire        adc1_th1,
     input  wire        adc2_th1,
@@ -13,19 +13,19 @@ module agc_th1_detector (
     input  wire        adc6_th1,
     input  wire        adc7_th1,
 
-    // 2. À´×Ô AXI-Lite ½Ó¿ÚµÄÇå³ıÂö³å (ARM Ğ´¼Ä´æÆ÷´¥·¢, clk ÓòÔ­ÉúĞÅºÅ)
+    // 2. æ¥è‡ª AXI-Lite æ¥å£çš„æ¸…é™¤è„‰å†² (ARM å†™å¯„å­˜å™¨è§¦å‘, clk åŸŸåŸç”Ÿä¿¡å·)
     input  wire        axi_clear_status,
 
-    // 3. Êä³ö¸øÖĞĞÄ DSA FSM µÄÈ«¾Ö±¨¾¯ (´¿ÊµÊ±£¬ÎŞÕ³ĞÔ£¬¹©µ×²ã¿ìËÙÏìÓ¦)
+    // 3. è¾“å‡ºç»™ä¸­å¿ƒ DSA FSM çš„å…¨å±€æŠ¥è­¦ (çº¯å®æ—¶ï¼Œæ— ç²˜æ€§ï¼Œä¾›åº•å±‚å¿«é€Ÿå“åº”)
     output reg         global_th1_alert,
 
-    // 4. Êä³ö¸ø AXI-Lite ¼Ä´æÆ÷µÄÕ³ĞÔ×´Ì¬×ÜÏß (¹© ARM ÂıÂı¶Á)
+    // 4. è¾“å‡ºç»™ AXI-Lite å¯„å­˜å™¨çš„ç²˜æ€§çŠ¶æ€æ€»çº¿ (ä¾› ARM æ…¢æ…¢è¯»)
     output wire  [7:0]  th1_status_bus_sticky
 );
 
     // =======================================================
-    // Stage 0: CDC - clk_adcX Óò -> clk (s_axi_aclk) Óò
-    // 8 Â·¶ÀÁ¢±¨¾¯Î»£¬ÓÃÏòÁ¿»¯ 2FF Í¬²½Æ÷Ò»´ÎĞÔ´¦Àí
+    // Stage 0: CDC - clk_adcX åŸŸ -> clk (s_axi_aclk) åŸŸ
+    // 8 è·¯ç‹¬ç«‹æŠ¥è­¦ä½ï¼Œç”¨å‘é‡åŒ– 2FF åŒæ­¥å™¨ä¸€æ¬¡æ€§å¤„ç†
     // =======================================================
     wire [7:0] th1_async;
     wire [7:0] th1_sync;
@@ -43,13 +43,13 @@ module agc_th1_detector (
     );
 
     // =======================================================
-    // Stage 1: Á÷Ë®Ïß»º³å¶ÔÆë (»ùÓÚÒÑÍ¬²½µÄĞÅºÅ)
-    // ËµÃ÷£ºth1_sync ±¾ÉíÒÑ¾­ÊÇ clk ÓòÄÚ¸É¾»¡¢¼Ä´æÆ÷Êä³öµÄĞÅºÅ
-    //       (sync_2ff ÄÚ²¿µÄ sync_ff ¾ÍÊÇÕâÒ»¼¶¼Ä´æÆ÷)¡£
-    //       Õâ±£ÁôÒ»¼¶¶ÀÁ¢»º³å£¬ÊÇÎªÁËÈÃ OR-tree Á÷Ë®ÏßµÄ
-    //       Éî¶ÈÓëÄãÔ­Éè¼Æ±£³ÖÒ»ÖÂ£¬±ãÓÚºó¼¶Ê±ĞòÊÕÁ²£»
-    //       Èç¹û²»ÔÚÒâÕâÒ»¼¶ÑÓ³Ù£¬Ò²¿ÉÒÔÖ±½ÓÓÃ th1_sync ½ÓÈë
-    //       Stage 2£¬Ê¡µôÕâÒ»¼¶¼Ä´æÆ÷¡£
+    // Stage 1: æµæ°´çº¿ç¼“å†²å¯¹é½ (åŸºäºå·²åŒæ­¥çš„ä¿¡å·)
+    // è¯´æ˜ï¼šth1_sync æœ¬èº«å·²ç»æ˜¯ clk åŸŸå†…å¹²å‡€ã€å¯„å­˜å™¨è¾“å‡ºçš„ä¿¡å·
+    //       (sync_2ff å†…éƒ¨çš„ sync_ff å°±æ˜¯è¿™ä¸€çº§å¯„å­˜å™¨)ã€‚
+    //       è¿™ä¿ç•™ä¸€çº§ç‹¬ç«‹ç¼“å†²ï¼Œæ˜¯ä¸ºäº†è®© OR-tree æµæ°´çº¿çš„
+    //       æ·±åº¦ä¸ä½ åŸè®¾è®¡ä¿æŒä¸€è‡´ï¼Œä¾¿äºåçº§æ—¶åºæ”¶æ•›ï¼›
+    //       å¦‚æœä¸åœ¨æ„è¿™ä¸€çº§å»¶è¿Ÿï¼Œä¹Ÿå¯ä»¥ç›´æ¥ç”¨ th1_sync æ¥å…¥
+    //       Stage 2ï¼Œçœæ‰è¿™ä¸€çº§å¯„å­˜å™¨ã€‚
     // =======================================================
     reg [7:0] th1_stage1_reg;
     always @(posedge clk or negedge rst_n) begin
@@ -61,7 +61,7 @@ module agc_th1_detector (
     end
 
     // =======================================================
-    // Stage 2 & 3: Ó²¼şÊµÊ±È«¾Ö±¨¾¯ (Pipeline OR Tree)
+    // Stage 2 & 3: ç¡¬ä»¶å®æ—¶å…¨å±€æŠ¥è­¦ (Pipeline OR Tree)
     // =======================================================
     reg groupA_alert;
     reg groupB_alert;
@@ -71,29 +71,27 @@ module agc_th1_detector (
             groupB_alert     <= 1'b0;
             global_th1_alert <= 1'b0;
         end else begin
-            // ·Ö×é OR
+            // åˆ†ç»„ OR
             groupA_alert <= th1_stage1_reg[0] | th1_stage1_reg[1] | th1_stage1_reg[2] | th1_stage1_reg[3];
             groupB_alert <= th1_stage1_reg[4] | th1_stage1_reg[5] | th1_stage1_reg[6] | th1_stage1_reg[7];
 
-            // È«¾Ö OR£¬Ö±½ÓËÍ¸ø PL ¶ËµÄ DSA ÖĞĞÄ×´Ì¬»ú (ÎŞĞèµÈ´ıÈí¼ş¸ÉÔ¤)
+            // å…¨å±€ ORï¼Œç›´æ¥é€ç»™ PL ç«¯çš„ DSA ä¸­å¿ƒçŠ¶æ€æœº (æ— éœ€ç­‰å¾…è½¯ä»¶å¹²é¢„)
             global_th1_alert <= groupA_alert | groupB_alert;
         end
     end
 
     // =======================================================
-    // Stage 4: Èí¼şÓÑºÃµÄÕ³ĞÔ×´Ì¬×ÜÏßÂß¼­ (Sticky Logic)
+    // Stage 4: è½¯ä»¶å‹å¥½çš„ç²˜æ€§çŠ¶æ€æ€»çº¿é€»è¾‘ (Sticky Logic)
     // =======================================================
     reg [7:0]  th1_status_bus_sticky1;
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             th1_status_bus_sticky1 <= 8'd0;
         end
-        else if (axi_clear_status) begin
-            th1_status_bus_sticky1 <= 8'd0;
-        end
-        else begin
+        else if (axi_clear_status)
+            th1_status_bus_sticky1 <= th1_stage1_reg;
+        else
             th1_status_bus_sticky1 <= th1_status_bus_sticky1 | th1_stage1_reg;
-        end
     end
      assign th1_status_bus_sticky = th1_status_bus_sticky1;
 endmodule

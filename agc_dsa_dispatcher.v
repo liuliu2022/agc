@@ -2,26 +2,26 @@
 // =======================================================
 // agc_dsa_dispatcher
 // -------------------------------------------------------
-// ÏîÄ¿×¨Êô"½ºË®²ã"£º
-//   1. µ÷ÓÃ agc_dsa_code_converter£¬°ÑFSMÓò(atten_dB)ÓïÒå
-//      ×ª»»³ÉÓ²¼şÓò(hw_dsa_code)ÓïÒå£»
-//   2. µ÷ÓÃÍ¨ÓÃ¿âÄ£¿é fanout_dispatcher_generic£¬Íê³É
-//      ´òÅÄ + dont_touch¿ËÂ¡ + ¸ßÉÈ³ö·Ö·¢£»
-//   3. °Ñ´òÆ½(flatten)×ÜÏßÓ³Éä»ØÏîÄ¿×¨ÊôµÄ¾ßÃû¶Ë¿Ú
-//      (adc0_01_dsa_code µÈ)£¬¹© RFDC IP Ö±½ÓÀı»¯¡£
+// é¡¹ç›®ä¸“å±"èƒ¶æ°´å±‚"ï¼š
+//   1. è°ƒç”¨ agc_dsa_code_converterï¼ŒæŠŠFSMåŸŸ(atten_dB)è¯­ä¹‰
+//      è½¬æ¢æˆç¡¬ä»¶åŸŸ(hw_dsa_code)è¯­ä¹‰ï¼›
+//   2. è°ƒç”¨é€šç”¨åº“æ¨¡å— fanout_dispatcher_genericï¼Œå®Œæˆ
+//      æ‰“æ‹ + dont_touchå…‹éš† + é«˜æ‰‡å‡ºåˆ†å‘ï¼›
+//   3. æŠŠæ‰“å¹³(flatten)æ€»çº¿æ˜ å°„å›é¡¹ç›®ä¸“å±çš„å…·åç«¯å£
+//      (adc0_01_dsa_code ç­‰)ï¼Œä¾› RFDC IP ç›´æ¥ä¾‹åŒ–ã€‚
 //
-// ±¾ÎÄ¼ş²»ÔÙ°üº¬ÈÎºÎ´òÅÄ/¿ËÂ¡Âß¼­±¾Éí¡ª¡ªÄÇ²¿·ÖÒÑ¾­³Áµí
-// ½ø fanout_dispatcher_generic£¨¸öÈËRTL¿â fanout/ Ä¿Â¼£©£¬
-// ÕâÀïÖ»×ö"ÏîÄ¿ÓïÒå <-> Í¨ÓÃ¿â½Ó¿Ú"µÄÓ³Éä£¬·½±ãÒÔºó
-// Í¨ÓÃÂß¼­Éı¼¶Ê±£¬½ºË®²ãÍêÈ«²»ÓÃ¸Ä¡£
+// æœ¬æ–‡ä»¶ä¸å†åŒ…å«ä»»ä½•æ‰“æ‹/å…‹éš†é€»è¾‘æœ¬èº«â€”â€”é‚£éƒ¨åˆ†å·²ç»æ²‰æ·€
+// è¿› fanout_dispatcher_genericï¼ˆä¸ªäººRTLåº“ fanout/ ç›®å½•ï¼‰ï¼Œ
+// è¿™é‡Œåªåš"é¡¹ç›®è¯­ä¹‰ <-> é€šç”¨åº“æ¥å£"çš„æ˜ å°„ï¼Œæ–¹ä¾¿ä»¥å
+// é€šç”¨é€»è¾‘å‡çº§æ—¶ï¼Œèƒ¶æ°´å±‚å®Œå…¨ä¸ç”¨æ”¹ã€‚
 //
-// Éè¼ÆËµÃ÷£¨8·İcode : 4·İupdate µÄ²»¶Ô³Æ´¦Àí£©£º
-//   fanout_dispatcher_generic ÄÚ²¿ÊÇ1:1Åä¶Ô(Ã¿·İcodeÅä
-//   Ò»·İupdate)£¬ÕâÀïNUM_OUTPUTS=8¶ÔÆëcode¿ËÂ¡Êı£¬µ«
-//   Ã¿¸ötileµÄ01/23Á½·İupdateÆäÊµÍ¬Ô´Í¬ÅÄ£¬Òò´Ë½öÈ¡
-//   Å¼Êıindex(0,2,4,6)µÄupdate½Óµ½¶ÔÍâµÄtile¼¶update¿Ú£¬
-//   ÆæÊıindex(1,3,5,7)µÄupdateÏĞÖÃ²»ÓÃ£¬ÊôÓÚÓÃÉÙÁ¿FF
-//   ×ÊÔ´»»Í¨ÓÃÄ£¿éÁãÌØÅĞµÄÈ¡Éá¡£
+// è®¾è®¡è¯´æ˜ï¼ˆ8ä»½code : 4ä»½update çš„ä¸å¯¹ç§°å¤„ç†ï¼‰ï¼š
+//   fanout_dispatcher_generic å†…éƒ¨æ˜¯1:1é…å¯¹(æ¯ä»½codeé…
+//   ä¸€ä»½update)ï¼Œè¿™é‡ŒNUM_OUTPUTS=8å¯¹é½codeå…‹éš†æ•°ï¼Œä½†
+//   æ¯ä¸ªtileçš„01/23ä¸¤ä»½updateå…¶å®åŒæºåŒæ‹ï¼Œå› æ­¤ä»…å–
+//   å¶æ•°index(0,2,4,6)çš„updateæ¥åˆ°å¯¹å¤–çš„tileçº§updateå£ï¼Œ
+//   å¥‡æ•°index(1,3,5,7)çš„updateé—²ç½®ä¸ç”¨ï¼Œå±äºç”¨å°‘é‡FF
+//   èµ„æºæ¢é€šç”¨æ¨¡å—é›¶ç‰¹åˆ¤çš„å–èˆã€‚
 // =======================================================
 
 module agc_dsa_dispatcher #(
@@ -33,30 +33,30 @@ module agc_dsa_dispatcher #(
     input  wire        rst_n,
 
     // =======================================================
-    // 1. À´×ÔÖĞĞÄ DSA FSM µÄÈ«¾ÖÖ¸Áî£¨FSMÓòÓïÒå£ºatten_dB£©
+    // 1. æ¥è‡ªä¸­å¿ƒ DSA FSM çš„å…¨å±€æŒ‡ä»¤ï¼ˆFSMåŸŸè¯­ä¹‰ï¼šatten_dBï¼‰
     // =======================================================
     input  wire [CODE_WIDTH-1:0] global_dsa_code,
     input  wire                  global_dsa_update,
 
     // =======================================================
-    // 2. Êä³ö¸ø 4 ¸ö Tile (¹² 8 ×é½Ó¿Ú) µÄÎïÀíÒı½Å£¨Ó²¼şÓòÓïÒå£ºhw_dsa_code£©
+    // 2. è¾“å‡ºç»™ 4 ä¸ª Tile (å…± 8 ç»„æ¥å£) çš„ç‰©ç†å¼•è„šï¼ˆç¡¬ä»¶åŸŸè¯­ä¹‰ï¼šhw_dsa_codeï¼‰
     // =======================================================
-    // --- Tile 0 ½Ó¿Ú ---
+    // --- Tile 0 æ¥å£ ---
     output wire [CODE_WIDTH-1:0]  adc0_01_dsa_code,
     output wire [CODE_WIDTH-1:0]  adc0_23_dsa_code,
     output wire                   adc0_dsa_update,
 
-    // --- Tile 1 ½Ó¿Ú ---
+    // --- Tile 1 æ¥å£ ---
     output wire [CODE_WIDTH-1:0]  adc1_01_dsa_code,
     output wire [CODE_WIDTH-1:0]  adc1_23_dsa_code,
     output wire                   adc1_dsa_update,
 
-    // --- Tile 2 ½Ó¿Ú ---
+    // --- Tile 2 æ¥å£ ---
     output wire [CODE_WIDTH-1:0]  adc2_01_dsa_code,
     output wire [CODE_WIDTH-1:0]  adc2_23_dsa_code,
     output wire                   adc2_dsa_update,
 
-    // --- Tile 3 ½Ó¿Ú ---
+    // --- Tile 3 æ¥å£ ---
     output wire [CODE_WIDTH-1:0]  adc3_01_dsa_code,
     output wire [CODE_WIDTH-1:0]  adc3_23_dsa_code,
     output wire                   adc3_dsa_update
@@ -65,8 +65,8 @@ module agc_dsa_dispatcher #(
     localparam integer NUM_OUTPUTS = 8;  // 4 tiles x 2 ports
 
     // =======================================================
-    // Stage A: FSMÓò(atten_dB) -> Ó²¼şÓò(hw_dsa_code) ÓïÒå×ª»»
-    // 8Í¨µÀÍ³Ò»Ë¥¼õ£¬¹²ÓÃÒ»¸ö×ª»»ÊµÀı
+    // Stage A: FSMåŸŸ(atten_dB) -> ç¡¬ä»¶åŸŸ(hw_dsa_code) è¯­ä¹‰è½¬æ¢
+    // 8é€šé“ç»Ÿä¸€è¡°å‡ï¼Œå…±ç”¨ä¸€ä¸ªè½¬æ¢å®ä¾‹
     // =======================================================
     wire [CODE_WIDTH-1:0] hw_dsa_code_conv;
     wire                  hw_dsa_code_conv_valid;
@@ -85,9 +85,9 @@ module agc_dsa_dispatcher #(
     );
 
     // =======================================================
-    // Stage B: Í¨ÓÃ¸ßÉÈ³ö·Ö·¢Æ÷£¨¸öÈËRTL¿â fanout_dispatcher_generic£©
-    // ¸´Î»Öµ = Ó²¼şÓò"×î´óË¥¼õ"ÂëÖµ = 0£¬
-    // Óë agc_dsa_code_converter µÄ¸´Î»ÓïÒå±£³ÖÒ»ÖÂ
+    // Stage B: é€šç”¨é«˜æ‰‡å‡ºåˆ†å‘å™¨ï¼ˆä¸ªäººRTLåº“ fanout_dispatcher_genericï¼‰
+    // å¤ä½å€¼ = ç¡¬ä»¶åŸŸ"æœ€å¤§è¡°å‡"ç å€¼ = 0ï¼Œ
+    // ä¸ agc_dsa_code_converter çš„å¤ä½è¯­ä¹‰ä¿æŒä¸€è‡´
     // =======================================================
     wire [NUM_OUTPUTS*CODE_WIDTH-1:0] dsa_code_flat;
     wire [NUM_OUTPUTS-1:0]            dsa_update_flat;
@@ -106,13 +106,13 @@ module agc_dsa_dispatcher #(
     );
 
     // =======================================================
-    // Stage C: ´òÆ½×ÜÏß -> ÏîÄ¿×¨Êô¾ßÃû¶Ë¿ÚÓ³Éä
-    // indexÓ³Éä¹ØÏµ£º0=tile0_01 1=tile0_23 2=tile1_01 3=tile1_23
+    // Stage C: æ‰“å¹³æ€»çº¿ -> é¡¹ç›®ä¸“å±å…·åç«¯å£æ˜ å°„
+    // indexæ˜ å°„å…³ç³»ï¼š0=tile0_01 1=tile0_23 2=tile1_01 3=tile1_23
     //               4=tile2_01 5=tile2_23 6=tile3_01 7=tile3_23
     // =======================================================
     assign adc0_01_dsa_code = dsa_code_flat[1*CODE_WIDTH-1 -: CODE_WIDTH];
     assign adc0_23_dsa_code = dsa_code_flat[2*CODE_WIDTH-1 -: CODE_WIDTH];
-    assign adc0_dsa_update  = dsa_update_flat[0]; // Óëindex1(23)Í¬Ô´Í¬ÅÄ£¬È¡ÆäÒ»
+    assign adc0_dsa_update  = dsa_update_flat[0]; // ä¸index1(23)åŒæºåŒæ‹ï¼Œå–å…¶ä¸€
 
     assign adc1_01_dsa_code = dsa_code_flat[3*CODE_WIDTH-1 -: CODE_WIDTH];
     assign adc1_23_dsa_code = dsa_code_flat[4*CODE_WIDTH-1 -: CODE_WIDTH];

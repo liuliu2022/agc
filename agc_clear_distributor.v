@@ -5,15 +5,15 @@ module agc_clear_distributor (
     input  wire        rst_n,
 
     // =======================================================
-    // 1. À´×ÔÖĞĞÄ DSA FSM µÄÈ«¾ÖÇå³ıÖ¸Áî (µ¥ÅÄÂö³å)
+    // 1. æ¥è‡ªä¸­å¿ƒ DSA FSM çš„å…¨å±€æ¸…é™¤æŒ‡ä»¤ (å•æ‹è„‰å†²)
     // =======================================================
     input  wire        global_clear_ov,
     input  wire        global_clear_or,
 
     // =======================================================
-    // 2. Êä³ö¸ø 8 ¸ö ADC Í¨µÀµÄÎïÀíÇå³ıÒı½Å
+    // 2. è¾“å‡ºç»™ 8 ä¸ª ADC é€šé“çš„ç‰©ç†æ¸…é™¤å¼•è„š
     // =======================================================
-    // Over Voltage ¶ÀÁ¢Çå³ıÒı½Å (8¸ö)
+    // Over Voltage ç‹¬ç«‹æ¸…é™¤å¼•è„š (8ä¸ª)
     output reg         adc0_clear_ov,
     output reg         adc1_clear_ov,
     output reg         adc2_clear_ov,
@@ -23,7 +23,7 @@ module agc_clear_distributor (
     output reg         adc6_clear_ov,
     output reg         adc7_clear_ov,
 
-    // Over Range ¶ÀÁ¢Çå³ıÒı½Å (8¸ö)
+    // Over Range ç‹¬ç«‹æ¸…é™¤å¼•è„š (8ä¸ª)
     output reg         adc0_clear_or,
     output reg         adc1_clear_or,
     output reg         adc2_clear_or,
@@ -35,11 +35,11 @@ module agc_clear_distributor (
 );
 
     // =======================================================
-    // Âö³å¿ËÂ¡ÓëÉÈ³ö¸ôÀë (Register Duplication 1 to 8)
+    // è„‰å†²å…‹éš†ä¸æ‰‡å‡ºéš”ç¦» (Register Duplication 1 to 8)
     // =======================================================
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            // Òì²½¸´Î»Ê±È«²¿À­µÍ
+            // å¼‚æ­¥å¤ä½æ—¶å…¨éƒ¨æ‹‰ä½
             adc0_clear_ov <= 1'b0; adc1_clear_ov <= 1'b0;
             adc2_clear_ov <= 1'b0; adc3_clear_ov <= 1'b0;
             adc4_clear_ov <= 1'b0; adc5_clear_ov <= 1'b0;
@@ -50,7 +50,7 @@ module agc_clear_distributor (
             adc4_clear_or <= 1'b0; adc5_clear_or <= 1'b0;
             adc6_clear_or <= 1'b0; adc7_clear_or <= 1'b0;
         end else begin
-            // ÊÕµ½ FSM µÄ 1 ÅÄ¸ßµçÆ½ºó£¬ÔÚÕâÀï´ò 1 ÅÄ£¬²¢¿ËÂ¡³ö 8 ·İ¶ÀÁ¢Çı¶¯
+            // æ”¶åˆ° FSM çš„ 1 æ‹é«˜ç”µå¹³åï¼Œåœ¨è¿™é‡Œæ‰“ 1 æ‹ï¼Œå¹¶å…‹éš†å‡º 8 ä»½ç‹¬ç«‹é©±åŠ¨
             adc0_clear_ov <= global_clear_ov; adc1_clear_ov <= global_clear_ov;
             adc2_clear_ov <= global_clear_ov; adc3_clear_ov <= global_clear_ov;
             adc4_clear_ov <= global_clear_ov; adc5_clear_ov <= global_clear_ov;

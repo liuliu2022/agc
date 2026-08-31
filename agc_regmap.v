@@ -1,75 +1,92 @@
 `timescale 1 ns / 1 ps
 
 module agc_regmap #(
-    parameter ADDRESS_WIDTH = 14 // ½ÓÊÕÀ´×Ô up_axi µÄ×ÖµØÖ·Î»¿í
+    parameter ADDRESS_WIDTH = 14,
+    parameter CODE_WIDTH    = 5
 ) (
     // =======================================================
-    // 1. »ù´¡Ê±ÖÓÓë¸´Î» (AXI Ê±ÖÓÓò)
+    // 1. åŸºç¡€æ—¶é’Ÿä¸å¤ä½ (AXI æ—¶é’ŸåŸŸ)
     // =======================================================
     input  wire                     up_clk,
     input  wire                     up_rstn,
 
     // =======================================================
-    // 2. ÄÚ²¿¾«¼ò×ÜÏß (UP Bus) - Ğ´½Ó¿Ú
+    // 2. å†…éƒ¨ç²¾ç®€æ€»çº¿ (UP Bus) - å†™æ¥å£
     // =======================================================
     input  wire                     up_wreq,
-    input  wire [ADDRESS_WIDTH-1:0] up_waddr, // ×ÖµØÖ· (Word Aligned)
+    input  wire [ADDRESS_WIDTH-1:0] up_waddr, // å­—åœ°å€ (Word Aligned)
     input  wire [31:0]              up_wdata,
     output reg                      up_wack,
 
     // =======================================================
-    // 3. ÄÚ²¿¾«¼ò×ÜÏß (UP Bus) - ¶Á½Ó¿Ú
+    // 3. å†…éƒ¨ç²¾ç®€æ€»çº¿ (UP Bus) - è¯»æ¥å£
     // =======================================================
     input  wire                     up_rreq,
-    input  wire [ADDRESS_WIDTH-1:0] up_raddr, // ×ÖµØÖ· (Word Aligned)
+    input  wire [ADDRESS_WIDTH-1:0] up_raddr, // å­—åœ°å€ (Word Aligned)
     output reg  [31:0]              up_rdata,
     output reg                      up_rack,
 
     // =======================================================
-    // 4. Óë top_agc ½»»¥µÄÒµÎñĞÅºÅ
+    // 4. ä¸ top_agc äº¤äº’çš„ä¸šåŠ¡ä¿¡å·
     // =======================================================
-    // Êä³ö£ºµ¥ÖÜÆÚÇå³ıÂö³å (ÍêÃÀÌæ´úÔ­À´µÄ edge_detector)
+    // è¾“å‡ºï¼šå•å‘¨æœŸæ¸…é™¤è„‰å†² (å®Œç¾æ›¿ä»£åŸæ¥çš„ edge_detector)
     output reg                      axi_clear_ov,
     output reg                      axi_clear_or,
     output reg                      axi_clear_th1,
     output reg                      axi_clear_th2,
+
+    // ARM freeze control and AGC status readback.
+    output reg                      agc_freeze_req,
+    input  wire                     agc_freeze_active,
+    input  wire [CODE_WIDTH-1:0]    current_atten_db,
+    input  wire [CODE_WIDTH-1:0]    current_hw_dsa_code,
+    input  wire [3:0]               current_fsm_state,
     
-    // ÊäÈë£ºĞèÒª±» CPU ¶ÁÈ¡µÄÕ³ĞÔ×´Ì¬
+    // è¾“å…¥ï¼šéœ€è¦è¢« CPU è¯»å–çš„ç²˜æ€§çŠ¶æ€
     input  wire [7:0]               ov_status_bus_sticky,
     input  wire [7:0]               or_status_bus_sticky,
     input  wire [7:0]               th1_status_bus_sticky,
     input  wire [7:0]               th2_status_bus_sticky,
     
-    // Ô¤ÁôµÄÍ¨ÓÃÅäÖÃ¼Ä´æÆ÷ (Ìæ´úÔ­ slv_reg2 ºÍ slv_reg3)
+    // é¢„ç•™çš„é€šç”¨é…ç½®å¯„å­˜å™¨ (æ›¿ä»£åŸ slv_reg2 å’Œ slv_reg3)
     output reg  [31:0]              agc_config_1,
     output reg  [31:0]              agc_config_2
 );
 
-    // ÄÚ²¿Ôİ´æ¼Ä´æÆ÷£¬ÓÃÓÚ AXI Á´Â·²âÊÔ
+    // å†…éƒ¨æš‚å­˜å¯„å­˜å™¨ï¼Œç”¨äº AXI é“¾è·¯æµ‹è¯•
     reg [31:0] up_scratch = 32'd0;
 
+    localparam [ADDRESS_WIDTH-1:0] ADDR_COMMAND = 0;
+    localparam [ADDRESS_WIDTH-1:0] ADDR_ALARMS  = 1;
+    localparam [ADDRESS_WIDTH-1:0] ADDR_CONFIG1 = 2;
+    localparam [ADDRESS_WIDTH-1:0] ADDR_CONFIG2 = 3;
+    localparam [ADDRESS_WIDTH-1:0] ADDR_SCRATCH = 4;
+    localparam [ADDRESS_WIDTH-1:0] ADDR_CONTROL = 5;
+    localparam [ADDRESS_WIDTH-1:0] ADDR_STATUS  = 6;
+
     // =======================================================
-    // WRITE LOGIC (Ğ´Âß¼­ÓëÂö³åÉú³É)
+    // WRITE LOGIC (å†™é€»è¾‘ä¸è„‰å†²ç”Ÿæˆ)
     // =======================================================
     always @(posedge up_clk) begin
         if (up_rstn == 1'b0) begin
             up_wack       <= 1'b0;
             
-            // ÒµÎñ¼Ä´æÆ÷¸´Î»
+            // ä¸šåŠ¡å¯„å­˜å™¨å¤ä½
             axi_clear_ov  <= 1'b0;
             axi_clear_or  <= 1'b0;
             axi_clear_th1 <= 1'b0;
             axi_clear_th2 <= 1'b0;
+            agc_freeze_req <= 1'b0;
             agc_config_1  <= 32'd0;
             agc_config_2  <= 32'd0;
             up_scratch    <= 32'd0;
         end else begin
-            // Ä¬ÈÏÇé¿öÏÂ£¬Á¢¿ÌÓ¦´ğ AXI µÄĞ´ÇëÇó
+            // é»˜è®¤æƒ…å†µä¸‹ï¼Œç«‹åˆ»åº”ç­” AXI çš„å†™è¯·æ±‚
             up_wack <= up_wreq;
             
-            // ¡¾ADI ºËĞÄ¼¼ÇÉ£º×ÔÇåÁãÂö³å (Self-Clearing Pulse)¡¿
-            // Ä¬ÈÏÃ¿Ò»ÅÄ¶¼½«Âö³åÀ­µÍ£¬Ö»ÓĞÔÚ up_wreq ÓĞĞ§µÄÄÇ"Î¨Ò»Ò»¸öÊ±ÖÓÖÜÆÚ"²Å»á±»À­¸ß¡£
-            // ÕâÑùÖ±½ÓÊ¡È¥ÁË edge_detector£¬²»½ö½ÚÊ¡Âß¼­£¬Ê±ĞòÒ²¸üºÃ¡£
+            // ã€ADI æ ¸å¿ƒæŠ€å·§ï¼šè‡ªæ¸…é›¶è„‰å†² (Self-Clearing Pulse)ã€‘
+            // é»˜è®¤æ¯ä¸€æ‹éƒ½å°†è„‰å†²æ‹‰ä½ï¼Œåªæœ‰åœ¨ up_wreq æœ‰æ•ˆçš„é‚£"å”¯ä¸€ä¸€ä¸ªæ—¶é’Ÿå‘¨æœŸ"æ‰ä¼šè¢«æ‹‰é«˜ã€‚
+            // è¿™æ ·ç›´æ¥çœå»äº† edge_detectorï¼Œä¸ä»…èŠ‚çœé€»è¾‘ï¼Œæ—¶åºä¹Ÿæ›´å¥½ã€‚
             axi_clear_ov  <= 1'b0;
             axi_clear_or  <= 1'b0;
             axi_clear_th1 <= 1'b0;
@@ -77,54 +94,69 @@ module agc_regmap #(
 
             if (up_wreq == 1'b1) begin
                 case (up_waddr)
-                    // ×ÖµØÖ· 0 (¶ÔÓ¦ AXI ×Ö½ÚµØÖ· 0x00)£ºĞ´ 1 ´¥·¢¶ÔÓ¦µÄÇå³ıÂö³å
-                    14'h0000: begin
+                    // å­—åœ°å€ 0 (å¯¹åº” AXI å­—èŠ‚åœ°å€ 0x00)ï¼šå†™ 1 è§¦å‘å¯¹åº”çš„æ¸…é™¤è„‰å†²
+                    ADDR_COMMAND: begin
                         axi_clear_ov  <= up_wdata[0];
                         axi_clear_or  <= up_wdata[1];
                         axi_clear_th1 <= up_wdata[2];
                         axi_clear_th2 <= up_wdata[3];
                     end
-                    // ×ÖµØÖ· 2 (¶ÔÓ¦ AXI ×Ö½ÚµØÖ· 0x08)£ºÌæ´úÔ­ slv_reg2
-                    14'h0002: agc_config_1 <= up_wdata;
-                    // ×ÖµØÖ· 3 (¶ÔÓ¦ AXI ×Ö½ÚµØÖ· 0x0C)£ºÌæ´úÔ­ slv_reg3
-                    14'h0003: agc_config_2 <= up_wdata;
-                    // ×ÖµØÖ· 4 (¶ÔÓ¦ AXI ×Ö½ÚµØÖ· 0x10)£ºÔİ´æÆ÷£¬ÓÃÓÚÈí¼ş²âÊÔ×ÜÏß
-                    14'h0004: up_scratch   <= up_wdata;
+                    // å­—åœ°å€ 2 (å¯¹åº” AXI å­—èŠ‚åœ°å€ 0x08)ï¼šæ›¿ä»£åŸ slv_reg2
+                    ADDR_CONFIG1: agc_config_1 <= up_wdata;
+                    // å­—åœ°å€ 3 (å¯¹åº” AXI å­—èŠ‚åœ°å€ 0x0C)ï¼šæ›¿ä»£åŸ slv_reg3
+                    ADDR_CONFIG2: agc_config_2 <= up_wdata;
+                    // å­—åœ°å€ 4 (å¯¹åº” AXI å­—èŠ‚åœ°å€ 0x10)ï¼šæš‚å­˜å™¨ï¼Œç”¨äºè½¯ä»¶æµ‹è¯•æ€»çº¿
+                    ADDR_SCRATCH: up_scratch   <= up_wdata;
+                    // Byte address 0x14, bit 0: 1=freeze, 0=automatic AGC.
+                    ADDR_CONTROL: agc_freeze_req <= up_wdata[0];
                 endcase
             end
         end
     end
 
     // =======================================================
-    // READ LOGIC (¶ÁÂß¼­ÓëµØÖ·ÒëÂë)
+    // READ LOGIC (è¯»é€»è¾‘ä¸åœ°å€è¯‘ç )
     // =======================================================
     always @(posedge up_clk) begin
         if (up_rstn == 1'b0) begin
             up_rack  <= 1'b0;
             up_rdata <= 32'd0;
         end else begin
-            // Ä¬ÈÏÇé¿öÏÂ£¬Á¢¿ÌÓ¦´ğ AXI µÄ¶ÁÇëÇó
+            // é»˜è®¤æƒ…å†µä¸‹ï¼Œç«‹åˆ»åº”ç­” AXI çš„è¯»è¯·æ±‚
             up_rack <= up_rreq;
             
             if (up_rreq == 1'b1) begin
                 case (up_raddr)
-                    // ×ÖµØÖ· 0 (0x00)£ºÂö³å¼Ä´æÆ÷£¬¶Á»ØºãÎª 0
-                    14'h0000: up_rdata <= 32'd0; 
+                    // å­—åœ°å€ 0 (0x00)ï¼šè„‰å†²å¯„å­˜å™¨ï¼Œè¯»å›æ’ä¸º 0
+                    ADDR_COMMAND: up_rdata <= 32'd0;
                     
-                    // ×ÖµØÖ· 1 (0x04)£º¶ÁÈ¡ AGC µÄ 4 ¸öÕ³ĞÔ±¨¾¯×´Ì¬ (Ìæ´úÔ­ slv_reg1)
-                    14'h0001: up_rdata <= {th2_status_bus_sticky, th1_status_bus_sticky, 
+                    // å­—åœ°å€ 1 (0x04)ï¼šè¯»å– AGC çš„ 4 ä¸ªç²˜æ€§æŠ¥è­¦çŠ¶æ€ (æ›¿ä»£åŸ slv_reg1)
+                    ADDR_ALARMS: up_rdata <= {th2_status_bus_sticky, th1_status_bus_sticky,
                                            or_status_bus_sticky,  ov_status_bus_sticky};
                     
-                    // ×ÖµØÖ· 2 (0x08)£º»Ø¶ÁÅäÖÃ 1
-                    14'h0002: up_rdata <= agc_config_1;
+                    // å­—åœ°å€ 2 (0x08)ï¼šå›è¯»é…ç½® 1
+                    ADDR_CONFIG1: up_rdata <= agc_config_1;
                     
-                    // ×ÖµØÖ· 3 (0x0C)£º»Ø¶ÁÅäÖÃ 2
-                    14'h0003: up_rdata <= agc_config_2;
+                    // å­—åœ°å€ 3 (0x0C)ï¼šå›è¯»é…ç½® 2
+                    ADDR_CONFIG2: up_rdata <= agc_config_2;
                     
-                    // ×ÖµØÖ· 4 (0x10)£º»Ø¶ÁÔİ´æÆ÷
-                    14'h0004: up_rdata <= up_scratch;
+                    // å­—åœ°å€ 4 (0x10)ï¼šå›è¯»æš‚å­˜å™¨
+                    ADDR_SCRATCH: up_rdata <= up_scratch;
+
+                    ADDR_CONTROL: up_rdata <= {31'd0, agc_freeze_req};
+
+                    // 0x18: [0] active, [1] requested, [6:2] attenuation,
+                    // [11:7] RFDC code, [15:12] FSM state (for CODE_WIDTH=5).
+                    ADDR_STATUS: up_rdata <= {
+                        {(32-(6+2*CODE_WIDTH)){1'b0}},
+                        current_fsm_state,
+                        current_hw_dsa_code,
+                        current_atten_db,
+                        agc_freeze_req,
+                        agc_freeze_active
+                    };
                     
-                    // ·ÃÎÊÎ´Ó³ÉäµØÖ·Ê±£¬·µ»Ø ADI ¾­µäµÄ Debug ±êÊ¶Âë
+                    // è®¿é—®æœªæ˜ å°„åœ°å€æ—¶ï¼Œè¿”å› ADI ç»å…¸çš„ Debug æ ‡è¯†ç 
                     default:  up_rdata <= 32'hDEADBEEF; 
                 endcase
             end

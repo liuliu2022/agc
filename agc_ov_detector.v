@@ -1,10 +1,10 @@
 `timescale 1ns / 1ps
 
 module agc_ov_detector (
-    input  wire        clk,               // ÓëÖĞĞÄ FSM Í¬Ô´µÄ¹¤×÷Ê±ÖÓ
-    input  wire        rst_n,             // Òì²½¸´Î»£¬µÍÓĞĞ§
+    input  wire        clk,               // ä¸ä¸­å¿ƒ FSM åŒæºçš„å·¥ä½œæ—¶é’Ÿ
+    input  wire        rst_n,             // å¼‚æ­¥å¤ä½ï¼Œä½æœ‰æ•ˆ
 
-    // 1. À´×Ô RF-ADC IP µÄ 8 ¸öÊµÊ±¹ıÑ¹±¨¾¯ĞÅºÅ (¶ÔÓ¦ÄãµÄÎïÀí½Ó¿Ú)
+    // 1. æ¥è‡ª RF-ADC IP çš„ 8 ä¸ªå®æ—¶è¿‡å‹æŠ¥è­¦ä¿¡å· (å¯¹åº”ä½ çš„ç‰©ç†æ¥å£)
     input  wire        adc0_ov,
     input  wire        adc1_ov,
     input  wire        adc2_ov,
@@ -14,38 +14,41 @@ module agc_ov_detector (
     input  wire        adc6_ov,
     input  wire        adc7_ov,
 
-    // 2. À´×Ô AXI-Lite ½Ó¿ÚµÄÇå³ıÂö³å
+    // 2. æ¥è‡ª AXI-Lite æ¥å£çš„æ¸…é™¤è„‰å†²
     input  wire        axi_clear_status,  
 
-    // 3. Êä³ö¸øÖĞĞÄ DSA FSM µÄÈ«¾ÖÖÂÃü¸æ¾¯ (×î¸ßÓÅÏÈ¼¶ÖĞ¶Ï)
+    // 3. è¾“å‡ºç»™ä¸­å¿ƒ DSA FSM çš„å…¨å±€è‡´å‘½å‘Šè­¦ (æœ€é«˜ä¼˜å…ˆçº§ä¸­æ–­)
     output reg         global_ov_alert,
 
-    // 4. Êä³ö¸ø AXI-Lite ¼Ä´æÆ÷µÄÕ³ĞÔ×´Ì¬×ÜÏß (ÓÃÓÚËÀ»úºóµÄ¹ÊÕÏËİÔ´)
+    // 4. è¾“å‡ºç»™ AXI-Lite å¯„å­˜å™¨çš„ç²˜æ€§çŠ¶æ€æ€»çº¿ (ç”¨äºæ­»æœºåçš„æ•…éšœæº¯æº)
     output wire  [7:0]  ov_status_bus_sticky
 );
 
     // =======================================================
-    // Stage 1: ÊäÈë»º³å¸ôÀë (Õ¶¶ÏÀ´×Ô IP ºËµÄ²¼ÏßÑÓ³Ù)
+    // Stage 1: è¾“å…¥ç¼“å†²éš”ç¦» (æ–©æ–­æ¥è‡ª IP æ ¸çš„å¸ƒçº¿å»¶è¿Ÿ)
     // =======================================================
-    reg [7:0] ov_stage1_reg;
+    wire [7:0] ov_async = {adc7_ov, adc6_ov, adc5_ov, adc4_ov,
+                           adc3_ov, adc2_ov, adc1_ov, adc0_ov};
+    wire [7:0] ov_sync;
+    reg  [7:0] ov_stage1_reg;
+
+    sync_nff #(.WIDTH(8)) u_sync_ov (
+        .dst_clk   (clk),
+        .dst_rst_n (rst_n),
+        .async_in  (ov_async),
+        .sync_out  (ov_sync)
+    );
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             ov_stage1_reg <= 8'd0;
         end else begin
-            ov_stage1_reg[0] <= adc0_ov;
-            ov_stage1_reg[1] <= adc1_ov;
-            ov_stage1_reg[2] <= adc2_ov;
-            ov_stage1_reg[3] <= adc3_ov;
-            ov_stage1_reg[4] <= adc4_ov;
-            ov_stage1_reg[5] <= adc5_ov;
-            ov_stage1_reg[6] <= adc6_ov;
-            ov_stage1_reg[7] <= adc7_ov;
+            ov_stage1_reg <= ov_sync;
         end
     end
 
     // =======================================================
-    // Stage 2 & 3: Ó²¼şÊµÊ±È«¾Ö¸æ¾¯ (Pipeline OR Tree)
+    // Stage 2 & 3: ç¡¬ä»¶å®æ—¶å…¨å±€å‘Šè­¦ (Pipeline OR Tree)
     // =======================================================
     reg groupA_ov; 
     reg groupB_ov; 
@@ -56,30 +59,27 @@ module agc_ov_detector (
             groupB_ov <= 1'b0;
             global_ov_alert <= 1'b0;
         end else begin
-            // ·Ö×é¾ÛºÏ
+            // åˆ†ç»„èšåˆ
             groupA_ov <= ov_stage1_reg[0] | ov_stage1_reg[1] | ov_stage1_reg[2] | ov_stage1_reg[3];
             groupB_ov <= ov_stage1_reg[4] | ov_stage1_reg[5] | ov_stage1_reg[6] | ov_stage1_reg[7];
             
-            // Ö»ÒªÓĞÈÎºÎÒ»¸ùÏß±¨¹ıÑ¹£¬Á¢¿ÌÀ­¸ßÈ«¾ÖÖĞ¶Ï
+            // åªè¦æœ‰ä»»ä½•ä¸€æ ¹çº¿æŠ¥è¿‡å‹ï¼Œç«‹åˆ»æ‹‰é«˜å…¨å±€ä¸­æ–­
             global_ov_alert <= groupA_ov | groupB_ov;
         end
     end
 
     // =======================================================
-    // Stage 4: Èí¼şÓÑºÃµÄÕ³ĞÔ×´Ì¬×ÜÏßÂß¼­ (Sticky Logic)
+    // Stage 4: è½¯ä»¶å‹å¥½çš„ç²˜æ€§çŠ¶æ€æ€»çº¿é€»è¾‘ (Sticky Logic)
     // =======================================================
     reg  [7:0]  ov_status_bus_sticky1;
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             ov_status_bus_sticky1 <= 8'd0;
         end 
-        else if (axi_clear_status) begin
-            ov_status_bus_sticky1 <= 8'd0; // ÊÕµ½Èí¼şÇå³ıÖ¸Áî£¬ÇåÁã¹ÊÕÏÂë
-        end 
-        else begin
-            // ÓÀÔ¶Ëø´æ×î¸ßÎ£µÄ¹ıÑ¹×´Ì¬
+        else if (axi_clear_status)
+            ov_status_bus_sticky1 <= ov_stage1_reg;
+        else
             ov_status_bus_sticky1 <= ov_status_bus_sticky1 | ov_stage1_reg;
-        end
     end
    assign ov_status_bus_sticky = ov_status_bus_sticky1;
 endmodule

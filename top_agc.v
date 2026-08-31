@@ -3,44 +3,44 @@
 // =======================================================
 // top_agc
 // -------------------------------------------------------
-// 8Í¨µÀ RFSoC AGC ¶¥²ã¼¯³ÉÄ£¿é
+// 8é€šé“ RFSoC AGC é¡¶å±‚é›†æˆæ¨¡å—
 //
-// Êı¾İÁ÷£º
-//   4x8Ì½²âÆ÷(OV/OR/TH1/TH2) --alert--> agc_central_fsm
-//   agc_central_fsm --clear_ov/or--> agc_clear_distributor --> 8Í¨µÀÎïÀíÇå³ıÒı½Å
-//   agc_central_fsm --atten_dB(Ö±¾õÊ½)+update--> agc_dsa_dispatcher
-//     £¨dB->Ó²¼şÂë×ª»» + ´òÅÄ + dont_touch¿ËÂ¡·Ö·¢£¬¾ùÒÑÄÚ½¨ÓÚ
-//       agc_dsa_dispatcher ÄÚ²¿£¬¶¥²ã²»ÔÙµ¥¶ÀÀı»¯converter£©
-//   agc_dsa_dispatcher --> 4 Tile ÎïÀíDSAÒı½Å
+// æ•°æ®æµï¼š
+//   4x8æ¢æµ‹å™¨(OV/OR/TH1/TH2) --alert--> agc_central_fsm
+//   agc_central_fsm --clear_ov/or--> agc_clear_distributor --> 8é€šé“ç‰©ç†æ¸…é™¤å¼•è„š
+//   agc_central_fsm --atten_dB(ç›´è§‰å¼)+update--> agc_dsa_dispatcher
+//     ï¼ˆdB->ç¡¬ä»¶ç è½¬æ¢ + æ‰“æ‹ + dont_touchå…‹éš†åˆ†å‘ï¼Œå‡å·²å†…å»ºäº
+//       agc_dsa_dispatcher å†…éƒ¨ï¼Œé¡¶å±‚ä¸å†å•ç‹¬ä¾‹åŒ–converterï¼‰
+//   agc_dsa_dispatcher --> 4 Tile ç‰©ç†DSAå¼•è„š
 //
-// ËµÃ÷£º
-//   1. [½Ó¿Ú±ä¸ü] agc_dsa_code_converter ÒÑÏÂ³Áµ½
-//      agc_dsa_dispatcher ÄÚ²¿Àı»¯£¬¶¥²ã²»ÔÙÖØ¸´Àı»¯¡£
-//      agc_dsa_dispatcher µÄ global_dsa_code/global_dsa_update
-//      ÊäÈë¶Ë¿ÚÓïÒåÊÇ FSMÓò(atten_dB)£¬¶ø²»ÊÇÓ²¼şÂë¡ª¡ª
-//      ÕâÓë¾É°ætop_agcµÄÁ¬Ïß·½Ê½²»Í¬£¬Îñ±ØÈ·ÈÏÃ»ÓĞÔÚ´Ë
-//      Ö®ÍâµÄµØ·½ÔÙ´Î²åÈë×ª»»Âß¼­£¬·ñÔò»áµ¼ÖÂdB->code
-//      ±»×ª»»Á½´Î£¬²úÉú´íÎóµÄË¥¼õÂëÖµ¡£
-//   2. Èí¼şÓÑºÃµÄÕ³ĞÔ×´Ì¬×ÜÏß (Sticky Logic) ÒÑ¾­ÄÚ½¨ÔÚ¸÷Ì½²âÆ÷
-//      Ä£¿éÄÚ²¿£¬±¾¶¥²ãÔİ²»´¦Àí AXI-Lite µØÖ·ÒëÂë£¬½ö½«
-//      *_status_bus_sticky ºÍ axi_clear_* ×÷ÎªÕ¼Î»¶Ë¿ÚÒı³ö£¬
-//      ºóĞø½ÓÈë AXI-Lite ¼Ä´æÆ÷×éÊ±ÔÙ¶ÔÆëÓ³Éä¹ØÏµ¡£
-//   3. CLK_FREQ_HZ ²ÎÊı»¯¸ÄÔì£ºagc_central_fsm Ä¿Ç°ËÀÇøÊ±¼äÈÔÊÇ
-//      Ğ´ËÀµÄ localparam£¬ÉĞÎ´¿ª·Å CLK_FREQ_HZ ²ÎÊı£¬´ı Vivado
-//      È·ÈÏ AXI4-Stream fabric Ê±ÖÓÆµÂÊºó£¬ĞèÒª»ØÍ·¸ø
-//      agc_central_fsm ²¹ÉÏ¸Ã²ÎÊı²¢ÔÚ´Ë´¦Í¸´«£¬±¾ÎÄ¼şÔİ²»¸Ä¶¯
-//      ×ÓÄ£¿é½Ó¿Ú¡£
+// è¯´æ˜ï¼š
+//   1. [æ¥å£å˜æ›´] agc_dsa_code_converter å·²ä¸‹æ²‰åˆ°
+//      agc_dsa_dispatcher å†…éƒ¨ä¾‹åŒ–ï¼Œé¡¶å±‚ä¸å†é‡å¤ä¾‹åŒ–ã€‚
+//      agc_dsa_dispatcher çš„ global_dsa_code/global_dsa_update
+//      è¾“å…¥ç«¯å£è¯­ä¹‰æ˜¯ FSMåŸŸ(atten_dB)ï¼Œè€Œä¸æ˜¯ç¡¬ä»¶ç â€”â€”
+//      è¿™ä¸æ—§ç‰ˆtop_agcçš„è¿çº¿æ–¹å¼ä¸åŒï¼ŒåŠ¡å¿…ç¡®è®¤æ²¡æœ‰åœ¨æ­¤
+//      ä¹‹å¤–çš„åœ°æ–¹å†æ¬¡æ’å…¥è½¬æ¢é€»è¾‘ï¼Œå¦åˆ™ä¼šå¯¼è‡´dB->code
+//      è¢«è½¬æ¢ä¸¤æ¬¡ï¼Œäº§ç”Ÿé”™è¯¯çš„è¡°å‡ç å€¼ã€‚
+//   2. è½¯ä»¶å‹å¥½çš„ç²˜æ€§çŠ¶æ€æ€»çº¿ (Sticky Logic) å·²ç»å†…å»ºåœ¨å„æ¢æµ‹å™¨
+//      æ¨¡å—å†…éƒ¨ï¼Œæœ¬é¡¶å±‚æš‚ä¸å¤„ç† AXI-Lite åœ°å€è¯‘ç ï¼Œä»…å°†
+//      *_status_bus_sticky å’Œ axi_clear_* ä½œä¸ºå ä½ç«¯å£å¼•å‡ºï¼Œ
+//      åç»­æ¥å…¥ AXI-Lite å¯„å­˜å™¨ç»„æ—¶å†å¯¹é½æ˜ å°„å…³ç³»ã€‚
+//   3. CLK_FREQ_HZ å‚æ•°åŒ–æ”¹é€ ï¼šagc_central_fsm ç›®å‰æ­»åŒºæ—¶é—´ä»æ˜¯
+//      å†™æ­»çš„ localparamï¼Œå°šæœªå¼€æ”¾ CLK_FREQ_HZ å‚æ•°ï¼Œå¾… Vivado
+//      ç¡®è®¤ AXI4-Stream fabric æ—¶é’Ÿé¢‘ç‡åï¼Œéœ€è¦å›å¤´ç»™
+//      agc_central_fsm è¡¥ä¸Šè¯¥å‚æ•°å¹¶åœ¨æ­¤å¤„é€ä¼ ï¼Œæœ¬æ–‡ä»¶æš‚ä¸æ”¹åŠ¨
+//      å­æ¨¡å—æ¥å£ã€‚
 // =======================================================
 module top_agc #(
-    parameter integer DSA_RANGE_DB = 27,  // Æ÷¼şDSA×ÜË¥¼õ·¶Î§(dB)£¬ĞèÓëRFDC IPÊµ¼ÊÅäÖÃ(DS926)Ò»ÖÂ
-    parameter integer DSA_STEP_DB  = 1,   // Ã¿¸öcode¶ÔÓ¦µÄdB step
-    parameter integer CODE_WIDTH   = 5    // dsa_codeÎ»¿í
+    parameter integer DSA_RANGE_DB = 27,  // å™¨ä»¶DSAæ€»è¡°å‡èŒƒå›´(dB)ï¼Œéœ€ä¸RFDC IPå®é™…é…ç½®(DS926)ä¸€è‡´
+    parameter integer DSA_STEP_DB  = 1,   // æ¯ä¸ªcodeå¯¹åº”çš„dB step
+    parameter integer CODE_WIDTH   = 5    // dsa_codeä½å®½
 )(
     input  wire        clk,
     input  wire        rst_n,
 
     // =======================================================
-    // 1. À´×Ô 8 Â· RF-ADC IP µÄÊµÊ±±¨¾¯ĞÅºÅ
+    // 1. æ¥è‡ª 8 è·¯ RF-ADC IP çš„å®æ—¶æŠ¥è­¦ä¿¡å·
     // =======================================================
     input  wire        adc0_ov,  input wire adc1_ov,  input wire adc2_ov,  input wire adc3_ov,
     input  wire        adc4_ov,  input wire adc5_ov,  input wire adc6_ov,  input wire adc7_ov,
@@ -55,7 +55,7 @@ module top_agc #(
     input  wire        adc4_th2, input wire adc5_th2, input wire adc6_th2, input wire adc7_th2,
 
     // =======================================================
-    // 2. À´×Ô AXI-Lite µÄÇå³ıÂö³åÕ¼Î»ÊäÈë (µØÖ·ÒëÂëÔİ²»´¦Àí)
+    // 2. æ¥è‡ª AXI-Lite çš„æ¸…é™¤è„‰å†²å ä½è¾“å…¥ (åœ°å€è¯‘ç æš‚ä¸å¤„ç†)
     // =======================================================
     input  wire        axi_clear_ov,
     input  wire        axi_clear_or,
@@ -63,15 +63,22 @@ module top_agc #(
     input  wire        axi_clear_th2,
 
     // =======================================================
-    // 3. ¹© AXI-Lite ¼Ä´æÆ÷¶ÁÈ¡µÄÕ³ĞÔ×´Ì¬×ÜÏßÕ¼Î»Êä³ö
+    // 3. ä¾› AXI-Lite å¯„å­˜å™¨è¯»å–çš„ç²˜æ€§çŠ¶æ€æ€»çº¿å ä½è¾“å‡º
     // =======================================================
     output wire [7:0]  ov_status_bus_sticky,
     output wire [7:0]  or_status_bus_sticky,
     output wire [7:0]  th1_status_bus_sticky,
     output wire [7:0]  th2_status_bus_sticky,
 
+    // ARM control/status. Keep agc_freeze_req high throughout DMA.
+    input  wire                  agc_freeze_req,
+    output wire                  agc_freeze_active,
+    output wire [CODE_WIDTH-1:0] current_atten_db,
+    output wire [CODE_WIDTH-1:0] current_hw_dsa_code,
+    output wire [3:0]            current_fsm_state,
+
     // =======================================================
-    // 4. ËÍ¸ø RFDC IP µÄÎïÀíÇå³ıÒı½Å (8Í¨µÀ x OV/OR)
+    // 4. é€ç»™ RFDC IP çš„ç‰©ç†æ¸…é™¤å¼•è„š (8é€šé“ x OV/OR)
     // =======================================================
     output wire        adc0_clear_ov, output wire adc1_clear_ov,
     output wire        adc2_clear_ov, output wire adc3_clear_ov,
@@ -84,7 +91,7 @@ module top_agc #(
     output wire        adc6_clear_or, output wire adc7_clear_or,
 
     // =======================================================
-    // 5. ËÍ¸ø RFDC IP µÄÊµÊ± DSA ¿ØÖÆ¶Ë¿Ú (4 Tile x 2×é)
+    // 5. é€ç»™ RFDC IP çš„å®æ—¶ DSA æ§åˆ¶ç«¯å£ (4 Tile x 2ç»„)
     // =======================================================
     output wire [CODE_WIDTH-1:0] adc0_01_dsa_code, output wire [CODE_WIDTH-1:0] adc0_23_dsa_code, output wire adc0_dsa_update,
     output wire [CODE_WIDTH-1:0] adc1_01_dsa_code, output wire [CODE_WIDTH-1:0] adc1_23_dsa_code, output wire adc1_dsa_update,
@@ -93,21 +100,21 @@ module top_agc #(
 );
 
     // =======================================================
-    // ÄÚ²¿»¥Á¬Ïß
+    // å†…éƒ¨äº’è¿çº¿
     // =======================================================
     wire        global_ov_alert;
     wire        global_or_alert;
     wire        global_th1_alert;
-    wire        global_th2_weak_alert;   // th2_detectorÊä³öÃû£¬½ÓÈëfsmµÄglobal_th2_weak
+    wire        global_th2_weak_alert;   // th2_detectorè¾“å‡ºåï¼Œæ¥å…¥fsmçš„global_th2_weak
 
-    wire [CODE_WIDTH-1:0] atten_db_intuitive;   // fsm²àÖ±¾õÊ½dBË¥¼õÁ¿£¬Ö±½ÓÎ¹¸ødispatcher
+    wire [CODE_WIDTH-1:0] atten_db_intuitive;   // fsmä¾§ç›´è§‰å¼dBè¡°å‡é‡ï¼Œç›´æ¥å–‚ç»™dispatcher
     wire                   atten_db_valid;
 
     wire        global_clear_ov;
     wire        global_clear_or;
 
     // =======================================================
-    // 1. ËÄ´óÌ½²âÆ÷ (OV / OR / TH1 / TH2)
+    // 1. å››å¤§æ¢æµ‹å™¨ (OV / OR / TH1 / TH2)
     // =======================================================
     agc_ov_detector u_ov_detector (
         .clk                  (clk),
@@ -174,27 +181,36 @@ module top_agc #(
     );
 
     // =======================================================
-    // 2. ÖĞĞÄ DSA ¿ØÖÆ×´Ì¬»ú
-    //    ×¢£ºglobal_th2_weak_alert -> global_th2_weak ½öÎª¶Ë¿ÚÃüÃû²îÒì
+    // 2. ä¸­å¿ƒ DSA æ§åˆ¶çŠ¶æ€æœº
+    //    æ³¨ï¼šglobal_th2_weak_alert -> global_th2_weak ä»…ä¸ºç«¯å£å‘½åå·®å¼‚
     // =======================================================
-    agc_central_fsm u_central_fsm (
+    agc_central_fsm #(
+        .CODE_WIDTH   (CODE_WIDTH),
+        .DSA_RANGE_DB (DSA_RANGE_DB)
+    ) u_central_fsm (
         .clk                (clk                  ),
         .rst_n              (rst_n                ),
         .global_ov_alert    (global_ov_alert      ),
         .global_or_alert    (global_or_alert      ),
         .global_th1_alert   (global_th1_alert     ),
         .global_th2_weak    (global_th2_weak_alert),
+        .freeze_req         (agc_freeze_req       ),
+        .freeze_active      (agc_freeze_active    ),
+        .fsm_state          (current_fsm_state    ),
         .global_dsa_code    (atten_db_intuitive   ),
         .global_dsa_update  (atten_db_valid       ),
         .global_clear_ov    (global_clear_ov      ),
         .global_clear_or    (global_clear_or      )
     );
 
+    assign current_atten_db    = atten_db_intuitive;
+    assign current_hw_dsa_code = adc0_01_dsa_code;
+
     // =======================================================
-    // 3. DSA ÂëÖµ·Ö·¢µ½ 4 ¸ö Tile
-    //    [±ä¸ü] dB->Ó²¼şÂë×ª»»ÒÑÄÚ½¨ÓÚ agc_dsa_dispatcher ÄÚ²¿£¬
-    //    ¶¥²ãÖ±½Ó°ÑFSMµÄatten_dB(Ö±¾õÊ½)Î¹¸ødispatcher£¬
-    //    ²»ÔÙĞèÒª¶¥²ãµ¥¶ÀÀı»¯ agc_dsa_code_converter¡£
+    // 3. DSA ç å€¼åˆ†å‘åˆ° 4 ä¸ª Tile
+    //    [å˜æ›´] dB->ç¡¬ä»¶ç è½¬æ¢å·²å†…å»ºäº agc_dsa_dispatcher å†…éƒ¨ï¼Œ
+    //    é¡¶å±‚ç›´æ¥æŠŠFSMçš„atten_dB(ç›´è§‰å¼)å–‚ç»™dispatcherï¼Œ
+    //    ä¸å†éœ€è¦é¡¶å±‚å•ç‹¬ä¾‹åŒ– agc_dsa_code_converterã€‚
     // =======================================================
     agc_dsa_dispatcher #(
         .DSA_RANGE_DB (DSA_RANGE_DB),
@@ -203,7 +219,7 @@ module top_agc #(
     ) u_dsa_dispatcher (
         .clk                (clk),
         .rst_n              (rst_n),
-        .global_dsa_code    (atten_db_intuitive),  // FSMÓòÓïÒå£¬·ÇÓ²¼şÂë
+        .global_dsa_code    (atten_db_intuitive),  // FSMåŸŸè¯­ä¹‰ï¼Œéç¡¬ä»¶ç 
         .global_dsa_update  (atten_db_valid),
 
         .adc0_01_dsa_code   (adc0_01_dsa_code),
@@ -224,7 +240,7 @@ module top_agc #(
     );
 
     // =======================================================
-    // 4. OV/OR Çå³ıÂö³å·Ö·¢µ½ 8 ¸öÎïÀíÍ¨µÀ
+    // 4. OV/OR æ¸…é™¤è„‰å†²åˆ†å‘åˆ° 8 ä¸ªç‰©ç†é€šé“
     // =======================================================
     agc_clear_distributor u_clear_distributor (
         .clk              (clk),
