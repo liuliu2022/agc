@@ -43,8 +43,6 @@ address in Vivado Address Editor.
 
 If the three modules are integrated separately, connect these ports:
 
-Connect these ports at the integration level:
-
 ```text
 agc_regmap.agc_freeze_req       -> top_agc.agc_freeze_req
 top_agc.agc_freeze_active      -> agc_regmap.agc_freeze_active

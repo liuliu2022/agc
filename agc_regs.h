@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define AGC_REG_COMMAND_OFFSET       0x00u
 #define AGC_REG_ALARMS_OFFSET        0x04u
 #define AGC_REG_CONFIG1_OFFSET       0x08u
@@ -10,6 +14,12 @@
 #define AGC_REG_SCRATCH_OFFSET       0x10u
 #define AGC_REG_CONTROL_OFFSET       0x14u
 #define AGC_REG_STATUS_OFFSET        0x18u
+
+#define AGC_COMMAND_CLEAR_OV         (1u << 0)
+#define AGC_COMMAND_CLEAR_OR         (1u << 1)
+#define AGC_COMMAND_CLEAR_TH1        (1u << 2)
+#define AGC_COMMAND_CLEAR_TH2        (1u << 3)
+#define AGC_COMMAND_CLEAR_ALL        0x0fu
 
 #define AGC_CONTROL_FREEZE_REQ       (1u << 0)
 
@@ -22,57 +32,53 @@
 #define AGC_STATUS_FSM_SHIFT         12u
 #define AGC_STATUS_FSM_MASK          (0x0fu << AGC_STATUS_FSM_SHIFT)
 
-static inline volatile uint32_t *agc_reg_ptr(uintptr_t base, uint32_t offset)
-{
-    return (volatile uint32_t *)(base + offset);
-}
+#define AGC_ALARMS_OV_SHIFT          0u
+#define AGC_ALARMS_OR_SHIFT          8u
+#define AGC_ALARMS_TH1_SHIFT         16u
+#define AGC_ALARMS_TH2_SHIFT         24u
 
-static inline uint32_t agc_read_status(uintptr_t base)
-{
-    return *agc_reg_ptr(base, AGC_REG_STATUS_OFFSET);
-}
+typedef struct {
+    uint32_t raw;
+    uint8_t freeze_active;
+    uint8_t freeze_requested;
+    uint8_t attenuation_db;
+    uint8_t hardware_dsa_code;
+    uint8_t fsm_state;
+} agc_status_t;
 
-static inline uint32_t agc_status_atten_db(uint32_t status)
-{
-    return (status & AGC_STATUS_ATTEN_MASK) >> AGC_STATUS_ATTEN_SHIFT;
-}
+typedef struct {
+    uint32_t raw;
+    uint8_t ov_channels;
+    uint8_t or_channels;
+    uint8_t th1_channels;
+    uint8_t th2_channels;
+} agc_alarms_t;
 
-static inline uint32_t agc_status_hw_code(uint32_t status)
-{
-    return (status & AGC_STATUS_HW_CODE_MASK) >> AGC_STATUS_HW_CODE_SHIFT;
-}
+uint32_t agc_reg_read(uintptr_t base, uint32_t offset);
+void agc_reg_write(uintptr_t base, uint32_t offset, uint32_t value);
+
+uint32_t agc_read_status_raw(uintptr_t base);
+agc_status_t agc_decode_status(uint32_t raw_status);
+agc_status_t agc_read_status(uintptr_t base);
+
+uint32_t agc_read_alarms_raw(uintptr_t base);
+agc_alarms_t agc_decode_alarms(uint32_t raw_alarms);
+agc_alarms_t agc_read_alarms(uintptr_t base);
+void agc_clear_alarms(uintptr_t base, uint32_t clear_mask);
 
 /*
- * Freeze AGC and return a coherent status word.  Start DMA only after this
- * function returns 0.  timeout_cycles is a CPU polling limit, not PL clocks.
+ * Request a frozen DSA state and wait for the hardware acknowledgement.
+ * timeout_polls is a CPU polling count, not a PL clock count.
+ * Returns 0 on success and -1 on timeout.
  */
-static inline int agc_freeze_for_dma(uintptr_t base,
-                                     uint32_t timeout_cycles,
-                                     uint32_t *locked_status)
-{
-    uint32_t status;
+int agc_freeze_for_dma(uintptr_t base,
+                       uint32_t timeout_polls,
+                       agc_status_t *locked_status);
 
-    *agc_reg_ptr(base, AGC_REG_CONTROL_OFFSET) = AGC_CONTROL_FREEZE_REQ;
-    __sync_synchronize();
+void agc_release_after_dma(uintptr_t base);
 
-    while (timeout_cycles-- != 0u) {
-        status = agc_read_status(base);
-        if ((status & AGC_STATUS_FREEZE_ACTIVE) != 0u) {
-            if (locked_status != (uint32_t *)0)
-                *locked_status = status;
-            __sync_synchronize();
-            return 0;
-        }
-    }
-
-    return -1;
+#ifdef __cplusplus
 }
-
-static inline void agc_release_after_dma(uintptr_t base)
-{
-    __sync_synchronize();
-    *agc_reg_ptr(base, AGC_REG_CONTROL_OFFSET) = 0u;
-    __sync_synchronize();
-}
+#endif
 
 #endif
